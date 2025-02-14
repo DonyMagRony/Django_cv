@@ -1,10 +1,14 @@
-from django.shortcuts import render
-
-from .models import Profile
+import platform
 import pdfkit
+import io
+
+from django.shortcuts import render
+from .models import Profile
 from django.http import HttpResponse
 from django.template import loader
-import io
+from django.shortcuts import get_object_or_404
+
+
 
 def accept(request):
     if request.method == "POST":
@@ -26,19 +30,38 @@ def accept(request):
         profile.save()
     return render(request, 'pdf/accept.html')
 
+
+def get_wkhtmltopdf_path():
+    os_platform = platform.system()
+    if os_platform == "Windows":
+        return r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+    elif os_platform == "Linux":
+        return "/usr/bin/wkhtmltopdf"
+    elif os_platform == "Darwin":
+        return "/usr/local/bin/wkhtmltopdf"
+    return None  
+
 def resume(request, id):
-    user_profile= Profile.objects.get(pk=id)
+    user_profile = get_object_or_404(Profile, pk=id)
     template = loader.get_template('pdf/resume.html')
     html = template.render({'user_profile': user_profile})
-    options = {'page-size': 'Letter',
-               'encoding': 'UTF-8',
-               }
-    pdf = pdfkit.from_string(html, False, options)
-    response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment'
-    filename ="resume_test.pdf"
-    return response
-    
+
+    options = {'page-size': 'Letter', 'encoding': 'UTF-8'}
+    wkhtmltopdf_path = get_wkhtmltopdf_path()
+
+    if not wkhtmltopdf_path:
+        return HttpResponse("wkhtmltopdf not found", status=500)
+
+    config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+
+    try:
+        pdf = pdfkit.from_string(html, False, options=options, configuration=config)
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="resume.pdf"'
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error generating PDF: {e}", status=500)
+
 def list(request):
     profiles = Profile.objects.all()
     return render(request, 'pdf/list.html', {'profiles':profiles})

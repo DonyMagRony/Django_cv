@@ -1,17 +1,17 @@
-% for cv in cvs %} 
+{% for cv in cvs %}
+    <h2>{{ cv.name }}</h2>
+    <p>Email: {{ cv.email }}</p>
 
-    <h2>{{ cv.name }}</h2> 
+    {% if cv.profile_picture %}
+        <img src="{{ cv.profile_picture.url }}" alt="Profile Picture" width="150">
+    {% else %}
+        <p>No profile picture uploaded.</p>
+    {% endif %}
 
-    <p>Email: {{ cv.email }}</p> 
-
-    {% if cv.profile_picture %} 
-
-        <img src="{{ cv.profile_picture.url }}" alt="Profile Picture" width="150"> 
-
-    {% else %} 
-
-        <p>No profile picture uploaded.</p> 
-
-    {% endif %} 
-
-{% endfor %} 
+    <!-- Share CV via Email -->
+    <form action="{% url 'share_cv_email' cv.id %}" method="post">
+        {% csrf_token %}
+        <input type="email" name="email" placeholder="Recipient Email" required>
+        <button type="submit">Share via Email</button>
+    </form>
+{% endfor %}
